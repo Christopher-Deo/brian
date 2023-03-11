@@ -19,7 +19,6 @@ const Chat = () => {
         Human: ${input}
         AI: `;
         try {
-            console.log('making request to openai');
             const response = await fetch('https://api.openai.com/v1/engines/davinci-codex/completions', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -34,15 +33,14 @@ const Chat = () => {
                     Authorization: `Bearer ${newKey}`, // replace with your actual OpenAI API key
                 },
             });
-            console.log('response is: ', response);
-
             const { choices } = await response.json();
             setReply(choices[0].text);
             const newReplies = [choices[0].text, ...replies];
             setReplies(newReplies);
-
             setIsLoading(false);
             console.log('reply is: ', reply);
+            setInput('');
+            setHidden(true);
         } catch (error) {
             console.error(error);
             setIsLoading(false);
@@ -57,13 +55,12 @@ const Chat = () => {
         setInput('');
     };
 
-    const handleNewResponse = async () => {
-        const newInput = input + ' ' + uuid();
+    const handleNewResponse = async (input, prevReply) => {
         try {
             const response = await fetch('https://api.openai.com/v1/engines/davinci-codex/completions', {
                 method: 'POST',
                 body: JSON.stringify({
-                    prompt: `Human: ${newInput}\nAI: ${reply}\nHuman: `,
+                    prompt: `Human: ${input}\nAI: ${prevReply}\nHuman: `,
                     max_tokens: 2046,
                     temperature: 0.8,
                     n: 1,
@@ -74,8 +71,6 @@ const Chat = () => {
                     Authorization: `Bearer ${newKey}`, // replace with your actual OpenAI API key
                 },
             });
-            console.log('response is: ', response);
-
             const { choices } = await response.json();
             const newReply = choices[0].text;
             setReply(newReply);
@@ -83,13 +78,11 @@ const Chat = () => {
             setReplies(newReplies);
 
             setIsLoading(false);
-            console.log('reply is: ', reply);
         } catch (error) {
             console.error(error);
             setIsLoading(false);
         }
     };
-
 
     const handleClearReplies = () => {
         setReplies([]);
@@ -107,7 +100,6 @@ const Chat = () => {
         alert("API key saved successfully!");
         setHasApiKey(true); // Add this line to update the state variable
     };
-
 
     return (
         <Container className="mt-5 border border-2 border-danger rounded mb-2">
@@ -155,21 +147,45 @@ const Chat = () => {
                     <div className="border border-2 border-primary rounded p-4 mb-2">
                         <h4 className='mt-2'>Replies:</h4>
                         <div className="mt-3 mb-5">
-                            {replies.length > 0 && replies.map((reply, index) => (
-                                <div key={uuid()}>{reply}</div>
-                            ))}
-                        </div>
 
-                        <div className='d-flex justify-content-end'>
-                            <Button variant="warning" type="button" onClick={handleClearReplies}>
-                                Clear Replies
-                            </Button>
+                        </div>
+                        <div>
+                            <Form
+                                id='responseForm'
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    handleNewResponse(input, reply);
+                                    setInput('');
+                                }}>
+                                <Form.Group controlId={`form${uuid()}`}>
+                                    <Form.Label>AI:</Form.Label>
+                                    {replies.length > 0 && replies.map((reply, index) => (
+                                        <div key={uuid()}>{reply}</div>
+                                    ))}
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="Enter your response here"
+                                        value={input}
+                                        onChange={handleChange}
+                                    />
+                                </Form.Group>
+                                <div className='d-flex justify-content-between mt-3'>
+                                    <Button
+                                        variant="warning"
+                                        type="button"
+                                        onClick={handleClearReplies}>
+                                        Clear Replies
+                                    </Button>
+                                    <Button variant="primary" type="submit">
+                                        Submit Response
+                                    </Button>
+                                </div>
+                            </Form>
                         </div>
                     </div>
                 </div>
             )}
         </Container>
     );
-    };
-
+};
 export default Chat;
